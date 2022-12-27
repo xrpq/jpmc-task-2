@@ -9,6 +9,12 @@ import './App.css';
 interface IState {
   data: ServerRespond[],
   showGraph: boolean,
+
+  // The state of the updating data
+  pause: boolean,
+
+  //The state of the steam button
+  streamBtnActive: boolean,
 }
 
 /**
@@ -25,6 +31,10 @@ class App extends Component<{}, IState> {
       data: [],
       // Initialize the graph as false because we dont want it to be shown until user clicks button.
       showGraph: false,
+      // Initialize pause as false because we want stream to start automatically.
+      pause: false,
+      // Initialized as true because we want stream button showing on website load.
+      streamBtnActive: true,
     };
   }
 
@@ -42,26 +52,25 @@ class App extends Component<{}, IState> {
    * Get new data from server and update the state with the new data
    */
   getDataFromServer() {
-    let limit = 0;
-    // using interval to continuasly update data.
+    // using interval to continuously update data.
     const interval = setInterval(() => {
+      //if pause=true, stops updating data by clearing interval.
+      if(this.state.pause){
+        clearInterval(interval);
+      }
       DataStreamer.getData((serverResponds: ServerRespond[]) => {
         // Update the state by creating a new array of data that consists of
         // Previous data in the state and the new data from server
         this.setState({ 
           data: serverResponds,
-          showGraph: true, 
+          showGraph: true,
         })
       });
 
-      limit++;
-
-      //Optional gaurd to stop interval process
-      // if(limit >= 1000){
-      //   clearInterval(interval);
-      // }
     }, 100);
   }
+
+
 
   /**
    * Render the App react component
@@ -73,15 +82,33 @@ class App extends Component<{}, IState> {
           Bank & Merge Co Task 2
         </header>
         <div className="App-content">
-          <button className="btn btn-primary Stream-button"
-            // when button is click, our react app tries to request
-            // new data from the server.
-            // As part of your task, update the getDataFromServer() function
-            // to keep requesting the data every 100ms until the app is closed
-            // or the server does not return anymore data.
-            onClick={() => {this.getDataFromServer()}}>
+          {this.state.streamBtnActive && <button className="btn btn-primary Stream-button"
+            // updates the getDataFromServer() function
+            // to keep requesting the data every 100ms until either the app is closed, the server does not return
+            // anymore data, or the toggle button is pressed. Hides stream button after it is pressed.
+                                                 onClick={() => {
+              this.getDataFromServer();
+              // on click, sets streamBtnActive to false in order to hide button
+              this.setState({
+                streamBtnActive: false,
+              })
+            }}>
             Start Streaming Data
-          </button>
+
+          </button>}
+
+
+          { // toggle button's visibility is opposite of stream button, so when stream is hidden, toggle is shown.
+            !this.state.streamBtnActive && <button className="btn btn-secondary Toggle-button" onClick={() => {
+            // toggles the app's pause value: if paused -> resumes, if not paused -> pauses
+              this.setState({
+                pause: !this.state.pause,
+              })
+            // calls get data from server in again to continue stream when "unpausing". Will stay static if pause=true.
+            this.getDataFromServer();
+          } }>
+            Toggle Stream
+          </button>}
           <div className="Graph">
             {this.renderGraph()}
           </div>
